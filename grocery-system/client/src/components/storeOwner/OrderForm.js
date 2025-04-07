@@ -26,7 +26,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { getAllSuppliers, getSupplierProducts, createOrder } from '../../services/api';
+import { getAllSuppliers, getSupplierProductsById, createOrder } from '../../services/api';
 
 const OrderForm = () => {
   const navigate = useNavigate();
@@ -76,7 +76,7 @@ const OrderForm = () => {
       try {
         setLoadingProducts(true);
         setError('');
-        const response = await getSupplierProducts(selectedSupplier);
+        const response = await getSupplierProductsById(selectedSupplier);
         setSupplierProducts(response.data.products || []);
         
         // If a product was preselected via URL, set its minimum quantity

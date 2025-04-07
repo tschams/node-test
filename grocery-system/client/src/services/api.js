@@ -34,10 +34,12 @@ export const approveOrder = (orderId) => api.patch(`/suppliers/orders/${orderId}
 
 // Store Owner API
 export const getAllProducts = () => api.get('/store/products');
+export const getAllSuppliers = () => api.get('/store/suppliers');
 export const getSupplierProductsById = (supplierId) => api.get(`/store/suppliers/${supplierId}/products`);
 export const getStoreOrders = () => api.get('/store/orders');
 export const createOrder = (orderData) => api.post('/store/orders', orderData);
 export const confirmOrderReceipt = (orderId) => api.patch(`/store/orders/${orderId}/status`, { status: 'completed' });
+export const updateOrderStatus = (orderId, statusData) => api.patch(`/store/orders/${orderId}/status`, statusData);
 export const getInventoryStatus = () => api.get('/store/inventory');
 
 // General API
