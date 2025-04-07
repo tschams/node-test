@@ -19,9 +19,11 @@ import Home from './components/Home';
 // Supplier Pages
 import SupplierDashboard from './components/supplier/Dashboard';
 import SupplierOrders from './components/supplier/Orders';
+import SupplierProducts from './components/supplier/Products';
+import SupplierProductForm from './components/supplier/ProductForm';
 
-// Store Owner Pages (we'll add these later)
-// import StoreOwnerDashboard from './components/storeOwner/Dashboard';
+// Store Owner Pages
+import StoreOwnerDashboard from './components/storeOwner/Dashboard';
 // import StoreOwnerOrders from './components/storeOwner/Orders';
 // import StoreOwnerProducts from './components/storeOwner/Products';
 // import StoreOwnerInventory from './components/storeOwner/Inventory';
@@ -58,22 +60,18 @@ function App() {
             <Route element={<ProtectedRoute role="supplier" />}>
               <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
               <Route path="/supplier/orders" element={<SupplierOrders />} />
-              {/* Add more supplier routes as needed */}
+              <Route path="/supplier/products" element={<SupplierProducts />} />
+              <Route path="/supplier/products/add" element={<SupplierProductForm />} />
             </Route>
             
             {/* Store Owner Routes */}
             <Route element={<ProtectedRoute role="storeOwner" />}>
-              {/* 
-                <Route path="/store/dashboard" element={<StoreOwnerDashboard />} />
-                <Route path="/store/orders" element={<StoreOwnerOrders />} />
-                <Route path="/store/products" element={<StoreOwnerProducts />} />
-                <Route path="/store/inventory" element={<StoreOwnerInventory />} />
-              */}
-              {/* Temporary redirects until we implement store owner components */}
-              <Route path="/store/dashboard" element={<div>Store Owner Dashboard - Coming Soon</div>} />
+              <Route path="/store/dashboard" element={<StoreOwnerDashboard />} />
+              {/* Temporary placeholders until we implement remaining store owner components */}
               <Route path="/store/orders" element={<div>Store Owner Orders - Coming Soon</div>} />
               <Route path="/store/products" element={<div>Store Owner Products - Coming Soon</div>} />
               <Route path="/store/inventory" element={<div>Store Owner Inventory - Coming Soon</div>} />
+              <Route path="/store/orders/new" element={<div>New Order Form - Coming Soon</div>} />
             </Route>
             
             {/* Error Routes */}
