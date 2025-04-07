@@ -34,7 +34,31 @@ export const approveOrder = (orderId) => api.patch(`/suppliers/orders/${orderId}
 
 // Store Owner API
 export const getAllProducts = () => api.get('/store/products');
-export const getAllSuppliers = () => api.get('/store/suppliers');
+export const getAllSuppliers = () => {
+  // This is a workaround - we'll extract unique suppliers from the products list
+  return getAllProducts().then(response => {
+    const products = response.data.products || [];
+    const uniqueSuppliers = [];
+    const supplierMap = {};
+    
+    products.forEach(product => {
+      if (product.supplier && !supplierMap[product.supplier._id]) {
+        supplierMap[product.supplier._id] = true;
+        uniqueSuppliers.push({
+          _id: product.supplier._id,
+          companyName: product.supplier.companyName || 'Unknown',
+          email: product.supplier.email
+        });
+      }
+    });
+    
+    return {
+      data: {
+        suppliers: uniqueSuppliers
+      }
+    };
+  });
+};
 export const getSupplierProductsById = (supplierId) => api.get(`/store/suppliers/${supplierId}/products`);
 export const getStoreOrders = () => api.get('/store/orders');
 export const createOrder = (orderData) => api.post('/store/orders', orderData);

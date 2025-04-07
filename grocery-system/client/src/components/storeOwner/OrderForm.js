@@ -25,7 +25,8 @@ import {
   ListItemSecondaryAction,
   CircularProgress,
   Alert,
-  Chip
+  Chip,
+  CardActions
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -67,16 +68,30 @@ const OrderForm = () => {
     const fetchSuppliers = async () => {
       try {
         setLoadingSuppliers(true);
+        setError('');
         const response = await getAllSuppliers();
+        
+        if (!response.data.suppliers || response.data.suppliers.length === 0) {
+          setError('No suppliers found. Please contact your administrator or add suppliers to your system.');
+          setSuppliers([]);
+          return;
+        }
+        
         setSuppliers(response.data.suppliers || []);
         
         // If supplier is preselected, move to next step
         if (preselectedSupplierId) {
-          setActiveStep(1);
+          const supplierExists = response.data.suppliers.some(s => s._id === preselectedSupplierId);
+          if (supplierExists) {
+            setActiveStep(1);
+          } else {
+            setError('Selected supplier not found. Please select another supplier.');
+            setSelectedSupplier('');
+          }
         }
       } catch (err) {
         console.error('Error fetching suppliers:', err);
-        setError('Failed to load suppliers. Please try again.');
+        setError('Failed to load suppliers. This could be because there are no products in the system yet. Please ensure products have been added by suppliers.');
       } finally {
         setLoadingSuppliers(false);
       }
@@ -94,6 +109,13 @@ const OrderForm = () => {
         setLoadingProducts(true);
         setError('');
         const response = await getSupplierProductsById(selectedSupplier);
+        
+        if (!response.data.products || response.data.products.length === 0) {
+          setSupplierProducts([]);
+          setError('No products available from this supplier. Please select another supplier or contact them to add products.');
+          return;
+        }
+        
         setSupplierProducts(response.data.products || []);
         
         // If a product was preselected via URL, set its minimum quantity
@@ -104,11 +126,13 @@ const OrderForm = () => {
             
             // Add preselected product to order
             handleAddToOrder(preselectedProduct._id, preselectedProduct.minimumPurchaseQuantity || 1);
+          } else {
+            setError('Selected product not found. Please choose another product.');
           }
         }
       } catch (err) {
         console.error('Error fetching supplier products:', err);
-        setError('Failed to load products for this supplier.');
+        setError('Failed to load products for this supplier. Please try again or select another supplier.');
         setSupplierProducts([]);
       } finally {
         setLoadingProducts(false);
@@ -261,6 +285,47 @@ const OrderForm = () => {
     );
   }
   
+  // No suppliers in the system
+  if (!loadingSuppliers && suppliers.length === 0) {
+    return (
+      <Container sx={{ py: 4 }}>
+        <Box display="flex" alignItems="center" mb={3}>
+          <Button 
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate(-1)}
+            sx={{ mr: 2 }}
+          >
+            Back
+          </Button>
+          <Typography variant="h4" component="div">
+            Store Order Form
+          </Typography>
+          <ShoppingCartIcon sx={{ ml: 2, fontSize: 30 }} />
+        </Box>
+        
+        <Paper sx={{ p: 4, textAlign: 'center', mb: 3 }}>
+          <Typography variant="h5" color="error" gutterBottom>
+            No Suppliers Available
+          </Typography>
+          <Typography variant="body1" paragraph>
+            There are no suppliers with products in the system. 
+            Before you can place orders, suppliers need to be added to the system and they need to add products.
+          </Typography>
+          <Typography variant="body1" paragraph>
+            Please contact your system administrator to ensure suppliers are set up.
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={() => navigate('/store/dashboard')}
+            sx={{ mt: 2 }}
+          >
+            Return to Dashboard
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
+  
   const renderStepContent = (step) => {
     switch (step) {
       case 0: // Select Supplier
@@ -268,6 +333,10 @@ const OrderForm = () => {
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Select a Supplier
+            </Typography>
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Choose a supplier to view their products and place an order.
             </Typography>
             
             <FormControl fullWidth sx={{ mb: 3 }}>
@@ -290,6 +359,60 @@ const OrderForm = () => {
                 ))}
               </Select>
             </FormControl>
+            
+            {suppliers.length > 0 && (
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Available Suppliers ({suppliers.length})
+                </Typography>
+                
+                <Grid container spacing={2}>
+                  {suppliers.map(supplier => (
+                    <Grid item xs={12} sm={6} md={4} key={supplier._id}>
+                      <Card 
+                        variant="outlined" 
+                        sx={{ 
+                          cursor: 'pointer',
+                          border: selectedSupplier === supplier._id ? '2px solid' : '1px solid',
+                          borderColor: selectedSupplier === supplier._id ? 'primary.main' : 'divider',
+                          transition: 'all 0.2s',
+                          '&:hover': {
+                            borderColor: 'primary.main',
+                            transform: 'translateY(-2px)',
+                            boxShadow: 1
+                          }
+                        }}
+                        onClick={() => setSelectedSupplier(supplier._id)}
+                      >
+                        <CardContent>
+                          <Typography variant="h6" component="div" gutterBottom>
+                            {supplier.companyName || 'Unknown Company'}
+                          </Typography>
+                          {supplier.email && (
+                            <Typography variant="body2" color="text.secondary">
+                              {supplier.email}
+                            </Typography>
+                          )}
+                        </CardContent>
+                        <CardActions>
+                          <Button 
+                            size="small" 
+                            color="primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedSupplier(supplier._id);
+                              handleNext();
+                            }}
+                          >
+                            Select and Continue
+                          </Button>
+                        </CardActions>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
           </Paper>
         );
         
@@ -499,10 +622,17 @@ const OrderForm = () => {
           Back
         </Button>
         <Typography variant="h4" component="div">
-          Place New Order
+          Store Order Form
         </Typography>
         <ShoppingCartIcon sx={{ ml: 2, fontSize: 30 }} />
       </Box>
+      
+      <Paper sx={{ p: 3, mb: 4, backgroundColor: 'info.lighter' }}>
+        <Typography variant="body1">
+          As a store owner, you can place orders with your suppliers using this form.
+          Orders will be sent to suppliers for approval before being processed.
+        </Typography>
+      </Paper>
       
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
