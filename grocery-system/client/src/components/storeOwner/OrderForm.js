@@ -6,6 +6,9 @@ import {
   Box,
   Button,
   Paper,
+  Stepper,
+  Step,
+  StepLabel,
   Grid,
   FormControl,
   InputLabel,
@@ -26,6 +29,9 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { getAllSuppliers, getSupplierProductsById, createOrder } from '../../services/api';
 
 const OrderForm = () => {
@@ -37,6 +43,11 @@ const OrderForm = () => {
   const preselectedSupplierId = queryParams.get('supplier');
   const preselectedProductId = queryParams.get('product');
   
+  // State for stepper
+  const [activeStep, setActiveStep] = useState(0);
+  const steps = ['Select Supplier', 'Add Products', 'Review & Submit'];
+  
+  // Order data
   const [suppliers, setSuppliers] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState(preselectedSupplierId || '');
   const [supplierProducts, setSupplierProducts] = useState([]);
@@ -44,6 +55,7 @@ const OrderForm = () => {
   const [selectedProduct, setSelectedProduct] = useState(preselectedProductId || '');
   const [quantity, setQuantity] = useState(1);
   
+  // UI states
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -57,6 +69,11 @@ const OrderForm = () => {
         setLoadingSuppliers(true);
         const response = await getAllSuppliers();
         setSuppliers(response.data.suppliers || []);
+        
+        // If supplier is preselected, move to next step
+        if (preselectedSupplierId) {
+          setActiveStep(1);
+        }
       } catch (err) {
         console.error('Error fetching suppliers:', err);
         setError('Failed to load suppliers. Please try again.');
@@ -66,7 +83,7 @@ const OrderForm = () => {
     };
     
     fetchSuppliers();
-  }, []);
+  }, [preselectedSupplierId]);
   
   // Load supplier products when a supplier is selected
   useEffect(() => {
@@ -84,6 +101,9 @@ const OrderForm = () => {
           const preselectedProduct = response.data.products.find(p => p._id === preselectedProductId);
           if (preselectedProduct) {
             setQuantity(preselectedProduct.minimumPurchaseQuantity || 1);
+            
+            // Add preselected product to order
+            handleAddToOrder(preselectedProduct._id, preselectedProduct.minimumPurchaseQuantity || 1);
           }
         }
       } catch (err) {
@@ -128,20 +148,21 @@ const OrderForm = () => {
     setQuantity(value > 0 ? value : 1);
   };
   
-  const handleAddToOrder = () => {
-    if (!selectedProduct || quantity <= 0) return;
+  const handleAddToOrder = (productId = selectedProduct, productQuantity = quantity) => {
+    if (!productId || productQuantity <= 0) return;
     
-    const product = supplierProducts.find(p => p._id === selectedProduct);
+    const product = supplierProducts.find(p => p._id === productId);
     
     if (!product) return;
     
     // Check if item already exists in order
-    const existingItemIndex = orderItems.findIndex(item => item.product._id === selectedProduct);
+    const existingItemIndex = orderItems.findIndex(item => item.product._id === productId);
     
     if (existingItemIndex >= 0) {
       // Update quantity if product already in order
       const updatedItems = [...orderItems];
-      updatedItems[existingItemIndex].quantity += quantity;
+      updatedItems[existingItemIndex].quantity += productQuantity;
+      updatedItems[existingItemIndex].price = updatedItems[existingItemIndex].quantity * product.pricePerItem;
       setOrderItems(updatedItems);
     } else {
       // Add new item to order
@@ -149,8 +170,8 @@ const OrderForm = () => {
         ...orderItems,
         {
           product,
-          quantity,
-          price: product.pricePerItem * quantity
+          quantity: productQuantity,
+          price: product.pricePerItem * productQuantity
         }
       ]);
     }
@@ -193,17 +214,16 @@ const OrderForm = () => {
       await createOrder(orderData);
       
       setSuccessMessage('Order placed successfully!');
-      setOrderItems([]);
+      setActiveStep(3); // Move to success step
       
       // Redirect after a short delay
       setTimeout(() => {
         navigate('/store/orders');
-      }, 2000);
+      }, 3000);
       
     } catch (err) {
       console.error('Error submitting order:', err);
       setError('Failed to place order. Please try again.');
-    } finally {
       setSubmitting(false);
     }
   };
@@ -212,7 +232,28 @@ const OrderForm = () => {
     return quantity >= (product.minimumPurchaseQuantity || 1);
   };
   
-  if (loadingSuppliers) {
+  const handleNext = () => {
+    // Validation for each step
+    if (activeStep === 0 && !selectedSupplier) {
+      setError('Please select a supplier to continue.');
+      return;
+    }
+    
+    if (activeStep === 1 && orderItems.length === 0) {
+      setError('Please add at least one product to continue.');
+      return;
+    }
+    
+    setActiveStep((prevStep) => prevStep + 1);
+    setError('');
+  };
+  
+  const handleBack = () => {
+    setActiveStep((prevStep) => prevStep - 1);
+    setError('');
+  };
+  
+  if (loadingSuppliers && activeStep === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
         <CircularProgress />
@@ -220,29 +261,13 @@ const OrderForm = () => {
     );
   }
   
-  return (
-    <Container sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Place New Order
-      </Typography>
-      
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-      
-      {successMessage && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {successMessage}
-        </Alert>
-      )}
-      
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={6}>
+  const renderStepContent = (step) => {
+    switch (step) {
+      case 0: // Select Supplier
+        return (
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
-              1. Select Supplier
+              Select a Supplier
             </Typography>
             
             <FormControl fullWidth sx={{ mb: 3 }}>
@@ -253,7 +278,6 @@ const OrderForm = () => {
                 value={selectedSupplier}
                 label="Supplier"
                 onChange={handleSupplierChange}
-                disabled={submitting}
               >
                 <MenuItem value="">
                   <em>Select a supplier</em>
@@ -266,163 +290,277 @@ const OrderForm = () => {
                 ))}
               </Select>
             </FormControl>
-            
-            {selectedSupplier && (
-              <>
-                <Typography variant="h6" gutterBottom>
-                  2. Add Products
-                </Typography>
-                
-                {loadingProducts ? (
-                  <CircularProgress size={24} sx={{ mt: 2 }} />
-                ) : (
-                  supplierProducts.length === 0 ? (
-                    <Alert severity="info">
-                      No products available from this supplier.
-                    </Alert>
-                  ) : (
-                    <Box>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                          <FormControl fullWidth>
-                            <InputLabel id="product-select-label">Product</InputLabel>
-                            <Select
-                              labelId="product-select-label"
-                              id="product-select"
-                              value={selectedProduct}
-                              label="Product"
-                              onChange={handleProductChange}
-                              disabled={submitting}
-                            >
-                              <MenuItem value="">
-                                <em>Select a product</em>
-                              </MenuItem>
-                              
-                              {supplierProducts.map(product => (
-                                <MenuItem key={product._id} value={product._id}>
-                                  {product.name} - ${product.pricePerItem.toFixed(2)}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            type="number"
-                            label="Quantity"
-                            fullWidth
-                            value={quantity}
-                            onChange={handleQuantityChange}
-                            InputProps={{ inputProps: { min: 1 } }}
-                            disabled={!selectedProduct || submitting}
-                            helperText={selectedProduct ? 
-                              `Min: ${supplierProducts.find(p => p._id === selectedProduct)?.minimumPurchaseQuantity || 1}` : 
-                              ''}
-                          />
-                        </Grid>
-                      </Grid>
-                      
-                      <Box textAlign="right" mt={2}>
-                        <Button
-                          variant="contained"
-                          startIcon={<AddIcon />}
-                          onClick={handleAddToOrder}
-                          disabled={!selectedProduct || submitting}
-                        >
-                          Add to Order
-                        </Button>
-                      </Box>
-                    </Box>
-                  )
-                )}
-              </>
-            )}
           </Paper>
-        </Grid>
+        );
         
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
+      case 1: // Add Products
+        return (
+          <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
-              Order Summary
+              Add Products from {suppliers.find(s => s._id === selectedSupplier)?.companyName || 'Supplier'}
             </Typography>
             
-            {orderItems.length === 0 ? (
-              <Alert severity="info" sx={{ mt: 2 }}>
-                No items added to order yet.
-              </Alert>
+            {loadingProducts ? (
+              <Box display="flex" justifyContent="center" py={3}>
+                <CircularProgress size={24} />
+              </Box>
             ) : (
-              <>
-                <List>
-                  {orderItems.map((item, index) => (
-                    <React.Fragment key={index}>
-                      <ListItem alignItems="flex-start">
-                        <ListItemText
-                          primary={item.product.name}
-                          secondary={
-                            <>
-                              <Typography
-                                component="span"
-                                variant="body2"
-                                color="text.primary"
-                              >
-                                ${item.product.pricePerItem.toFixed(2)} × {item.quantity} = ${item.price.toFixed(2)}
-                              </Typography>
-                              {!validateMinimumPurchase(item.product, item.quantity) && (
-                                <Chip 
-                                  size="small"
-                                  color="error"
-                                  label={`Below min qty (${item.product.minimumPurchaseQuantity})`}
-                                  sx={{ ml: 1 }}
-                                />
-                              )}
-                            </>
-                          }
-                        />
-                        <ListItemSecondaryAction>
-                          <IconButton 
-                            edge="end" 
-                            onClick={() => handleRemoveItem(index)}
-                            disabled={submitting}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </ListItemSecondaryAction>
-                      </ListItem>
-                      {index < orderItems.length - 1 && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </List>
-                
-                <Divider sx={{ my: 2 }} />
-                
-                <Box display="flex" justifyContent="space-between" mb={3}>
-                  <Typography variant="h6">Total:</Typography>
-                  <Typography variant="h6">${calculateTotal().toFixed(2)}</Typography>
+              supplierProducts.length === 0 ? (
+                <Alert severity="info">
+                  No products available from this supplier.
+                </Alert>
+              ) : (
+                <Box>
+                  <Grid container spacing={2} mb={2}>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth>
+                        <InputLabel id="product-select-label">Product</InputLabel>
+                        <Select
+                          labelId="product-select-label"
+                          id="product-select"
+                          value={selectedProduct}
+                          label="Product"
+                          onChange={handleProductChange}
+                        >
+                          <MenuItem value="">
+                            <em>Select a product</em>
+                          </MenuItem>
+                          
+                          {supplierProducts.map(product => (
+                            <MenuItem key={product._id} value={product._id}>
+                              {product.name} - ${product.pricePerItem.toFixed(2)}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        type="number"
+                        label="Quantity"
+                        fullWidth
+                        value={quantity}
+                        onChange={handleQuantityChange}
+                        InputProps={{ inputProps: { min: 1 } }}
+                        disabled={!selectedProduct}
+                        helperText={selectedProduct ? 
+                          `Min: ${supplierProducts.find(p => p._id === selectedProduct)?.minimumPurchaseQuantity || 1}` : 
+                          ''}
+                      />
+                    </Grid>
+                  </Grid>
+                  
+                  <Box textAlign="right">
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => handleAddToOrder()}
+                      disabled={!selectedProduct}
+                      sx={{ mb: 3 }}
+                    >
+                      Add to Order
+                    </Button>
+                  </Box>
+                  
+                  <Divider sx={{ my: 2 }} />
+                  
+                  <Typography variant="h6" gutterBottom>
+                    Items in Cart ({orderItems.length})
+                  </Typography>
+                  
+                  {orderItems.length === 0 ? (
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                      No items added to order yet.
+                    </Alert>
+                  ) : (
+                    <List>
+                      {orderItems.map((item, index) => (
+                        <ListItem key={index} divider={index < orderItems.length - 1}>
+                          <ListItemText
+                            primary={item.product.name}
+                            secondary={
+                              <>
+                                <Typography
+                                  component="span"
+                                  variant="body2"
+                                  color="text.primary"
+                                >
+                                  ${item.product.pricePerItem.toFixed(2)} × {item.quantity} = ${item.price.toFixed(2)}
+                                </Typography>
+                                {!validateMinimumPurchase(item.product, item.quantity) && (
+                                  <Chip 
+                                    size="small"
+                                    color="error"
+                                    label={`Below min qty (${item.product.minimumPurchaseQuantity})`}
+                                    sx={{ ml: 1 }}
+                                  />
+                                )}
+                              </>
+                            }
+                          />
+                          <ListItemSecondaryAction>
+                            <IconButton 
+                              edge="end" 
+                              onClick={() => handleRemoveItem(index)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </ListItemSecondaryAction>
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
                 </Box>
-                
-                <Box display="flex" justifyContent="space-between">
-                  <Button 
-                    variant="outlined" 
-                    onClick={() => navigate('/store/products')}
-                    disabled={submitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleSubmitOrder}
-                    disabled={orderItems.length === 0 || submitting}
-                  >
-                    {submitting ? <CircularProgress size={24} /> : 'Place Order'}
-                  </Button>
-                </Box>
-              </>
+              )
             )}
           </Paper>
-        </Grid>
-      </Grid>
+        );
+        
+      case 2: // Review & Submit
+        return (
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Review Your Order
+            </Typography>
+            
+            <Box mb={3}>
+              <Typography variant="subtitle1" gutterBottom>
+                Supplier
+              </Typography>
+              <Typography variant="body1">
+                {suppliers.find(s => s._id === selectedSupplier)?.companyName || 'Unknown Supplier'}
+              </Typography>
+            </Box>
+            
+            <Typography variant="subtitle1" gutterBottom>
+              Order Items
+            </Typography>
+            
+            <List sx={{ mb: 3 }}>
+              {orderItems.map((item, index) => (
+                <ListItem key={index} divider={index < orderItems.length - 1}>
+                  <ListItemText
+                    primary={`${item.quantity}x ${item.product.name}`}
+                    secondary={`$${item.product.pricePerItem.toFixed(2)} each`}
+                  />
+                  <Typography variant="body1">
+                    ${item.price.toFixed(2)}
+                  </Typography>
+                </ListItem>
+              ))}
+              
+              <ListItem>
+                <ListItemText
+                  primary={<Typography variant="h6">Total</Typography>}
+                />
+                <Typography variant="h6">
+                  ${calculateTotal().toFixed(2)}
+                </Typography>
+              </ListItem>
+            </List>
+            
+            <Alert severity="info" sx={{ mb: 3 }}>
+              Once submitted, your order will be sent to the supplier for approval.
+            </Alert>
+          </Paper>
+        );
+        
+      case 3: // Success
+        return (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <CheckCircleIcon sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
+            <Typography variant="h5" gutterBottom>
+              Order Placed Successfully!
+            </Typography>
+            <Typography variant="body1" paragraph>
+              Your order has been submitted to the supplier.
+            </Typography>
+            <Typography variant="body1" paragraph>
+              You'll be redirected to your orders page...
+            </Typography>
+            <CircularProgress size={24} sx={{ mt: 2 }} />
+          </Paper>
+        );
+        
+      default:
+        return null;
+    }
+  };
+  
+  return (
+    <Container sx={{ py: 4 }}>
+      <Box display="flex" alignItems="center" mb={3}>
+        <Button 
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(-1)}
+          sx={{ mr: 2 }}
+        >
+          Back
+        </Button>
+        <Typography variant="h4" component="div">
+          Place New Order
+        </Typography>
+        <ShoppingCartIcon sx={{ ml: 2, fontSize: 30 }} />
+      </Box>
+      
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {successMessage && activeStep !== 3 && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {successMessage}
+        </Alert>
+      )}
+      
+      <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+      
+      {renderStepContent(activeStep)}
+      
+      {activeStep < 3 && (
+        <Box display="flex" justifyContent="space-between">
+          <Button
+            variant="outlined"
+            onClick={activeStep === 0 ? () => navigate('/store/products') : handleBack}
+            disabled={submitting}
+          >
+            {activeStep === 0 ? 'Cancel' : 'Back'}
+          </Button>
+          
+          {activeStep === 2 ? (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSubmitOrder}
+              disabled={orderItems.length === 0 || submitting}
+            >
+              {submitting ? <CircularProgress size={24} /> : 'Place Order'}
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleNext}
+              disabled={
+                (activeStep === 0 && !selectedSupplier) ||
+                (activeStep === 1 && orderItems.length === 0) ||
+                submitting
+              }
+            >
+              Next
+            </Button>
+          )}
+        </Box>
+      )}
     </Container>
   );
 };
