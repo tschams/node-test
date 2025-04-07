@@ -24,9 +24,9 @@ import SupplierProductForm from './components/supplier/ProductForm';
 
 // Store Owner Pages
 import StoreOwnerDashboard from './components/storeOwner/Dashboard';
-// import StoreOwnerOrders from './components/storeOwner/Orders';
-// import StoreOwnerProducts from './components/storeOwner/Products';
-// import StoreOwnerInventory from './components/storeOwner/Inventory';
+import StoreOwnerOrders from './components/storeOwner/Orders';
+import StoreOwnerProducts from './components/storeOwner/Products';
+import StoreOwnerOrderForm from './components/storeOwner/OrderForm';
 
 // Error Pages
 const NotFound = () => <div>404 - Page Not Found</div>;
@@ -67,11 +67,10 @@ function App() {
             {/* Store Owner Routes */}
             <Route element={<ProtectedRoute role="storeOwner" />}>
               <Route path="/store/dashboard" element={<StoreOwnerDashboard />} />
-              {/* Temporary placeholders until we implement remaining store owner components */}
-              <Route path="/store/orders" element={<div>Store Owner Orders - Coming Soon</div>} />
-              <Route path="/store/products" element={<div>Store Owner Products - Coming Soon</div>} />
+              <Route path="/store/orders" element={<StoreOwnerOrders />} />
+              <Route path="/store/products" element={<StoreOwnerProducts />} />
+              <Route path="/store/orders/new" element={<StoreOwnerOrderForm />} />
               <Route path="/store/inventory" element={<div>Store Owner Inventory - Coming Soon</div>} />
-              <Route path="/store/orders/new" element={<div>New Order Form - Coming Soon</div>} />
             </Route>
             
             {/* Error Routes */}
