@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { getAllProducts } from '../../services/api';
+import AddIcon from '@mui/icons-material/Add';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -104,10 +105,37 @@ const Products = () => {
           to="/store/orders/new"
           variant="contained"
           color="primary"
+          size="large"
+          startIcon={<AddIcon />}
         >
           Place Order
         </Button>
       </Box>
+      
+      {/* Guidance Banner */}
+      <Paper 
+        sx={{ 
+          p: 3, 
+          mb: 4, 
+          bgcolor: 'info.light', 
+          color: 'info.contrastText',
+          border: '1px dashed',
+          borderColor: 'info.main'
+        }}
+      >
+        <Typography variant="h6" gutterBottom>
+          How to Place an Order:
+        </Typography>
+        <Typography variant="body1">
+          1. Browse products below or filter by supplier
+        </Typography>
+        <Typography variant="body1">
+          2. Click "Add to Order" on any product, or use the "Place Order" button above
+        </Typography>
+        <Typography variant="body1">
+          3. Select quantities and submit your order
+        </Typography>
+      </Paper>
       
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>

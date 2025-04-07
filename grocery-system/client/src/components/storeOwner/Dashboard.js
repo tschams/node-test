@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { getStoreOrders, getAllProducts } from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
+import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 
 const StoreOwnerDashboard = () => {
   const [orders, setOrders] = useState([]);
@@ -61,9 +62,23 @@ const StoreOwnerDashboard = () => {
   
   return (
     <Container sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Welcome, Store Owner
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" gutterBottom>
+          Welcome, Store Owner
+        </Typography>
+        
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          component={Link}
+          to="/store/orders/new"
+          startIcon={<AddShoppingCartIcon />}
+          sx={{ py: 1.5, px: 3, fontSize: '1rem' }}
+        >
+          Place New Order
+        </Button>
+      </Box>
       
       <Grid container spacing={3}>
         {/* Order Statistics */}

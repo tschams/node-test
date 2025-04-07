@@ -12,6 +12,7 @@ import {
 	Link,
 } from '@mui/material';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import { AuthContext } from '../../context/AuthContext';
 
 const Navbar = () => {
@@ -95,6 +96,20 @@ const Navbar = () => {
 									component={RouterLink}
 									to='/store/inventory'>
 									Inventory
+								</Button>
+								<Button
+									color='inherit'
+									variant="contained"
+									sx={{ 
+										ml: 2, 
+										bgcolor: 'secondary.main',
+										'&:hover': { bgcolor: 'secondary.dark' }
+									}}
+									component={RouterLink}
+									to='/store/orders/new'
+									startIcon={<AddShoppingCartIcon />}
+								>
+									New Order
 								</Button>
 							</>
 						)}
